@@ -4,24 +4,22 @@ from controller import Robot, DistanceSensor
 TIME_STEP = 64
 INFINITY = float('+inf')
 MAX_SPEED = 6.28
-FRONT_SENSORS_NAMES = ["ps0", "ps7"]
-LEFT_SENSOR_IN = "ps5"
-LEFT_SENSOR_OUT = "ps6"
-WALL_DETECTED_VALUE = 300
+FRONT_SENSORS_NAMES = ['ps0', 'ps7']
+LED_NAMES = ['led0', 'led1', 'led2', 'led3', 'led4', 'led5', 'led6', 'led7', 'led8', 'led9']
+WALL_DETECTED_VALUE = 350
 TURNING_WAIT_TIME = 1
 
 # Global Variables
-frontSensors = [None] * 2
-frontSensorsValues = [None] * 2
-
-# These two sensors keep the robot closer to the left wall
-leftSensorIn = None  # Left-most sensor, used to instruct the robot to turn right
-leftSensorOut = None # Left-front sensor, used to instruct the robot to turn left
+frontSensors = [None] * len(FRONT_SENSORS_NAMES)
+frontSensorsValues = [None] * len(FRONT_SENSORS_NAMES)
+leds = [None] * len(LED_NAMES)
 
 # Global instances
 robot = Robot()
 leftMotor = robot.getDevice('left wheel motor')
 rightMotor =  robot.getDevice('right wheel motor')
+leftSensorIn = robot.getDevice('ps5')  # Left-most sensor, used to instruct the robot to turn right
+leftSensorOut = robot.getDevice('ps6') # Left-front sensor, used to instruct the robot to turn left
 
 # INITIALIZE SENSORS
 def init_devices():
@@ -34,12 +32,14 @@ def init_devices():
       DistanceSensor.enable(frontSensors[i], int(robot.getBasicTimeStep()))
    
    # Initialize left sensors
-   leftSensorIn = robot.getDevice(LEFT_SENSOR_IN)
-   leftSensorOut = robot.getDevice(LEFT_SENSOR_OUT)
    DistanceSensor.enable(leftSensorIn, int(robot.getBasicTimeStep()))
    DistanceSensor.enable(leftSensorOut, int(robot.getBasicTimeStep()))
+
+   # Initialize leds
+   for i in range(len(LED_NAMES)):
+      leds[i] = robot.getDevice(LED_NAMES[i])
    
-   print("[INFO] Sensors activated")
+   print('[INFO] Sensors activated')
 
    leftMotor.setPosition(INFINITY)
    rightMotor.setPosition(INFINITY)
@@ -69,7 +69,7 @@ def get_left_sensor_out_value():
 def turn_right():
    leftMotor.setVelocity(MAX_SPEED)
    rightMotor.setVelocity(-MAX_SPEED)
-   print("[INFO] Turning right")
+   print('[INFO] Turning right')
    wait(TURNING_WAIT_TIME)
 
 def get_closer_to_wall():
@@ -83,7 +83,7 @@ def get_farther_from_wall():
 def stop():
    leftMotor.setVelocity(0.0)
    rightMotor.setVelocity(0.0)
-   print("[INFO] Stoping")
+   print('[INFO] Stoping')
    wait(0.2)
 
 def wait(sec):
@@ -91,7 +91,13 @@ def wait(sec):
    while startTime + sec > robot.getTime():
       step()
 
+def turn_on_leds():
+   for led in leds:
+      led.set(1)
 
+def turn_off_leds():
+   for led in leds:
+      led.set(0)
 
 ################################################################################################
 #---------------------------------EVERYTHING STARTS HERE---------------------------------------#
@@ -102,9 +108,11 @@ while True:
 
    # Check for walls in front
    if get_front_sensors_values() > WALL_DETECTED_VALUE:
-      print("[INFO] Wall detected")
+      print('[INFO] Wall detected')
+      turn_on_leds()
       stop()
       turn_right()
+      turn_off_leds()
    
    # These to conditions make the robot follow the left wall
    if get_left_sensor_in_value() < WALL_DETECTED_VALUE / 2:
